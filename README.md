@@ -7,10 +7,6 @@
 
 *Mükemmel draft'ınız için ihtiyacınız olan tek yardımcı. Veri ve uzman analizlerini birleştiren akıllı asistan.*
 
----
-
-![Uygulama Arayüzü](https://i.imgur.com/GHYsV8M.png)
-*(Not: Bu görseli kendi ekran görüntünüzle güncelleyebilirsiniz.)*
 
 ## 📝 Proje Hakkında
 
