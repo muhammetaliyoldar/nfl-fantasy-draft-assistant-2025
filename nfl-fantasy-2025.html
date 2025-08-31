@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anka Fantasy Football - Draft Assistant 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #0d1117;
+            color: #c9d1d9;
+        }
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+        .header-title {
+            font-family: 'Playfair Display', serif;
+            letter-spacing: 1.5px;
+        }
+        .grid-draft-board {
+            display: grid;
+            grid-template-columns: 80px repeat(12, minmax(0, 1fr));
+            gap: 4px;
+        }
+        .player-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 4px;
+            border-radius: 8px;
+            text-align: center;
+            height: 70px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease-in-out;
+            background-color: #24292f;
+        }
+        .player-card-selected {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .player-card:not(.player-card-selected):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+        }
+        .player-card-header {
+            font-weight: 600;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+        .player-card-sub {
+            font-size: 0.625rem;
+            color: #8b949e;
+        }
+        .player-card-selected .player-card-sub {
+            color: #d1e5ff;
+        }
+        .card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+        }
+        .card-header {
+            border-bottom: 1px solid #30363d;
+        }
+        .draft-team {
+            background-color: #1f2428;
+            border-radius: 8px;
+            padding: 8px 4px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .current-pick-highlight {
+            border: 3px solid #6ee7b7;
+            box-shadow: 0 0 10px #6ee7b7;
+        }
+        @keyframes pulse-border {
+            0% {
+                border-color: #6ee7b7;
+                box-shadow: 0 0 0 0 #6ee7b780;
+            }
+            50% {
+                border-color: #a7f3d0;
+                box-shadow: 0 0 0 6px #6ee7b740;
+            }
+            100% {
+                border-color: #6ee7b7;
+                box-shadow: 0 0 0 0 #6ee7b780;
+            }
+        }
+        .current-pick-team {
+            animation: pulse-border 1.5s infinite;
+        }
+        .player-list-item {
+            cursor: pointer;
+        }
+        .strategy-table {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 2 sütunlu yapı */
+            gap: 16px;
+        }
+        .status-badge {
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 9999px;
+            margin-left: 8px;
+        }
+        .status-q { background-color: #f59e0b; color: #1f2937; } /* Amber */
+        .status-sus { background-color: #ef4444; color: #ffffff; } /* Red */
+        .status-ir { background-color: #ef4444; color: #ffffff; } /* Red */
+        .status-pup { background-color: #a855f7; color: #ffffff; } /* Purple */
+        .status-nfi-r { background-color: #64748b; color: #ffffff; } /* Slate */
+        .status-d { background-color: #f59e0b; color: #1f2937; } /* Amber */
+    </style>
+</head>
+<body class="p-8">
+
+    <header class="text-center mb-10 border-b border-gray-700 pb-4">
+        <h1 class="text-5xl md:text-6xl font-bold text-white header-title">
+            <span class="text-cyan-400">Anka</span> Fantasy Football
+        </h1>
+        <p class="text-gray-400 mt-2 text-lg">Draft Assistant 2025</p>
+    </header>
+
+    <div class="container space-y-8">
+        <div class="space-y-8">
+            <div class="card p-6 rounded-2xl">
+                <h2 class="text-2xl font-bold mb-4 text-white">Draft Tahtası</h2>
+                <button id="full-view-btn" class="bg-gray-700 text-white px-4 py-2 rounded-xl mb-4 hover:bg-gray-600 transition-colors">Tam Görünüm</button>
+                <button id="compact-view-btn" class="bg-gray-700 text-white px-4 py-2 rounded-xl mb-4 hover:bg-gray-600 transition-colors">Daraltılmış Görünüm</button>
+                <div id="draft-board" class="overflow-x-auto overflow-y-auto pb-4" style="max-height: 400px;">
+                    <div class="grid-draft-board min-w-[1200px]">
+                        <div class="sticky left-0 bg-[#0d1117] z-10"></div>
+                        <div id="team-headers-container" class="contents"></div>
+                        <div id="player-grid-container" class="contents"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-8">
+                <div class="col-span-6 space-y-6">
+                    <div class="card p-6 rounded-2xl sticky top-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-2xl font-bold text-blue-400">Oyuncular</h2>
+                            <span id="current-picker-badge" class="bg-blue-600 text-white text-sm font-bold px-3 py-1 rounded-full"></span>
+                        </div>
+
+                        <div class="flex space-x-2 mb-4">
+                            <input id="player-search" type="text" placeholder="Oyuncu ara..." class="w-full p-2 rounded-lg bg-[#161b22] border border-[#30363d] text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select id="position-filter" class="p-2 rounded-lg bg-[#161b22] border border-[#30363d] text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="ALL">Tüm Pozisyonlar</option>
+                                <option value="QB">QB</option>
+                                <option value="RB">RB</option>
+                                <option value="WR">WR</option>
+                                <option value="TE">TE</option>
+                                <option value="K">K</option>
+                                <option value="DEF">DEF</option>
+                            </select>
+                        </div>
+
+                        <div id="available-players" class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+                            </div>
+                    </div>
+                </div>
+
+                <div class="col-span-6 space-y-6">
+                    <div id="your-team-panel" class="card p-6 rounded-2xl">
+                        <h2 class="text-2xl font-bold mb-4 text-white">Sizin Takımınız ve Sıra Ayarları</h2>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label for="your-team-select" class="block text-sm font-medium text-gray-400 mb-2">Benim Sıram:</label>
+                                <select id="your-team-select" class="w-full p-2 bg-[#161b22] border border-[#30363d] rounded-lg text-white mb-4">
+                                    </select>
+                                 <h3 class="block text-sm font-medium text-gray-400 mb-2 mt-4">Kadro Dağılımı</h3>
+                                <div id="your-roster-info" class="text-sm text-gray-400">
+                                    </div>
+                            </div>
+                            <div>
+                                <h3 class="block text-sm font-medium text-gray-400 mb-2">Mevcut Durum</h3>
+                                <div id="current-draft-status" class="w-full p-2 bg-[#161b22] border border-[#30363d] rounded-lg text-white mb-4"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 rounded-2xl">
+                        <h2 class="text-2xl font-bold mb-4 text-white">Stratejik Öneriler</h2>
+                        <div id="strategy-recommendations" class="strategy-table">
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center mt-12 pt-6 border-t border-gray-700">
+        <p class="text-gray-500 text-sm">Ze'O tarafından geliştirildi</p>
+    </footer>
+
+    <script>
+        var DRAFT_ORDER = ["Crew chiefs", "Zeo", "Kutay Ismail Kartal", "Phaselis", "Cacasikemedi", "Degababa", "Karsiyaka", "Hamsikoy", "Kecioren", "Theyads", "Buccaneers", "Somalieagle"];
+        var ALL_PLAYERS_DATA = [
+            {"rank":1,"name":"Ja'Marr Chase","position":"WR","team":"CIN","status":null,"bye":10,"adp":1},
+            {"rank":2,"name":"Bijan Robinson","position":"RB","team":"ATL","status":null,"bye":5,"adp":2},
+            {"rank":3,"name":"CeeDee Lamb","position":"WR","team":"DAL","status":null,"bye":10,"adp":3},
+            {"rank":4,"name":"Jahmyr Gibbs","position":"RB","team":"DET","status":null,"bye":8,"adp":4},
+            {"rank":5,"name":"Justin Jefferson","position":"WR","team":"MIN","status":"Q","bye":6,"adp":5},
+            {"rank":6,"name":"Saquon Barkley","position":"RB","team":"PHI","status":null,"bye":9,"adp":6},
+            {"rank":7,"name":"Christian McCaffrey","position":"RB","team":"SF","status":null,"bye":14,"adp":7},
+            {"rank":8,"name":"Malik Nabers","position":"WR","team":"NYG","status":"Q","bye":14,"adp":8},
+            {"rank":9,"name":"A.J. Brown","position":"WR","team":"PHI","status":"Q","bye":9,"adp":9},
+            {"rank":10,"name":"Derrick Henry","position":"RB","team":"BAL","status":null,"bye":7,"adp":10},
+            {"rank":11,"name":"Puka Nacua","position":"WR","team":"LAR","status":null,"bye":8,"adp":11},
+            {"rank":12,"name":"Amon-Ra St. Brown","position":"WR","team":"DET","status":null,"bye":8,"adp":12},
+            {"rank":13,"name":"De'Von Achane","position":"RB","team":"MIA","status":"Q","bye":12,"adp":13},
+            {"rank":14,"name":"Nico Collins","position":"WR","team":"HOU","status":null,"bye":6,"adp":14},
+            {"rank":15,"name":"Drake London","position":"WR","team":"ATL","status":null,"bye":5,"adp":15},
+            {"rank":16,"name":"Ashton Jeanty","position":"RB","team":"ROOKIE","status":null,"bye":null,"adp":16},
+            {"rank":17,"name":"Brian Thomas Jr.","position":"WR","team":"JAX","status":null,"bye":8,"adp":17},
+            {"rank":18,"name":"Chase Brown","position":"RB","team":"CIN","status":null,"bye":10,"adp":18},
+            {"rank":19,"name":"Bucky Irving","position":"RB","team":"TB","status":null,"bye":9,"adp":19},
+            {"rank":20,"name":"Jonathan Taylor","position":"RB","team":"IND","status":null,"bye":11,"adp":20},
+            {"rank":21,"name":"Kyren Williams","position":"RB","team":"LAR","status":null,"bye":8,"adp":21},
+            {"rank":22,"name":"Josh Jacobs","position":"RB","team":"GB","status":null,"bye":5,"adp":22},
+            {"rank":23,"name":"Trey McBride","position":"TE","team":"ARI","status":null,"bye":8,"adp":23},
+            {"rank":24,"name":"Brock Bowers","position":"TE","team":"LV","status":null,"bye":8,"adp":24},
+            {"rank":25,"name":"Ladd McConkey","position":"WR","team":"LAC","status":null,"bye":12,"adp":25},
+            {"rank":26,"name":"James Cook","position":"RB","team":"BUF","status":null,"bye":7,"adp":26},
+            {"rank":27,"name":"Terry McLaurin","position":"WR","team":"WAS","status":null,"bye":12,"adp":27},
+            {"rank":28,"name":"Mike Evans","position":"WR","team":"TB","status":null,"bye":9,"adp":28},
+            {"rank":29,"name":"DJ Moore","position":"WR","team":"CHI","status":null,"bye":5,"adp":29},
+            {"rank":30,"name":"Tee Higgins","position":"WR","team":"CIN","status":null,"bye":10,"adp":30},
+            {"rank":31,"name":"Lamar Jackson","position":"QB","team":"BAL","status":"Q","bye":7,"adp":31},
+            {"rank":32,"name":"Josh Allen","position":"QB","team":"BUF","status":null,"bye":7,"adp":32},
+            {"rank":33,"name":"Jalen Hurts","position":"QB","team":"PHI","status":null,"bye":9,"adp":33},
+            {"rank":34,"name":"Jaxon Smith-Njigba","position":"WR","team":"SEA","status":null,"bye":8,"adp":34},
+            {"rank":35,"name":"Tyreek Hill","position":"WR","team":"MIA","status":"Q","bye":12,"adp":35},
+            {"rank":36,"name":"TreVeyon Henderson","position":"RB","team":"NE","status":null,"bye":14,"adp":36},
+            {"rank":37,"name":"Omarion Hampton","position":"RB","team":"ROOKIE","status":null,"bye":null,"adp":37},
+            {"rank":38,"name":"George Kittle","position":"TE","team":"SF","status":null,"bye":14,"adp":38},
+            {"rank":39,"name":"Breece Hall","position":"RB","team":"NYJ","status":null,"bye":9,"adp":39},
+            {"rank":40,"name":"George Pickens","position":"WR","team":"DAL","status":null,"bye":10,"adp":40},
+            {"rank":41,"name":"D'Andre Swift","position":"RB","team":"CHI","status":null,"bye":5,"adp":41},
+            {"rank":42,"name":"Jameson Williams","position":"WR","team":"DET","status":null,"bye":8,"adp":42},
+            {"rank":43,"name":"Calvin Ridley","position":"WR","team":"TEN","status":"Q","bye":10,"adp":43},
+            {"rank":44,"name":"Patrick Mahomes","position":"QB","team":"KC","status":null,"bye":10,"adp":44},
+            {"rank":45,"name":"Joe Burrow","position":"QB","team":"CIN","status":null,"bye":10,"adp":45},
+            {"rank":46,"name":"Isiah Pacheco","position":"RB","team":"KC","status":null,"bye":10,"adp":46},
+            {"rank":47,"name":"Kenneth Walker III","position":"RB","team":"SEA","status":null,"bye":8,"adp":47},
+            {"rank":48,"name":"Rashee Rice","position":"WR","team":"KC","status":"SUS","bye":10,"adp":48},
+            {"rank":49,"name":"DK Metcalf","position":"WR","team":"PIT","status":null,"bye":5,"adp":49},
+            {"rank":50,"name":"Garrett Wilson","position":"WR","team":"NYJ","status":null,"bye":9,"adp":50},
+            {"rank":51,"name":"Marvin Harrison Jr.","position":"WR","team":"ARI","status":null,"bye":8,"adp":51},
+            {"rank":52,"name":"Tyler Warren","position":"TE","team":"ROOKIE","status":null,"bye":null,"adp":52},
+            {"rank":53,"name":"T.J. Hockenson","position":"TE","team":"MIN","status":null,"bye":6,"adp":53},
+            {"rank":54,"name":"Sam LaPorta","position":"TE","team":"DET","status":null,"bye":8,"adp":54},
+            {"rank":55,"name":"Travis Hunter","position":"WR","team":"ROOKIE","status":null,"bye":null,"adp":55},
+            {"rank":56,"name":"Tetairoa McMillan","position":"WR","team":"ROOKIE","status":null,"bye":null,"adp":56},
+            {"rank":57,"name":"Courtland Sutton","position":"WR","team":"DEN","status":null,"bye":12,"adp":57},
+            {"rank":58,"name":"Xavier Worthy","position":"WR","team":"KC","status":null,"bye":10,"adp":58},
+            {"rank":59,"name":"DeVonta Smith","position":"WR","team":"PHI","status":"Q","bye":9,"adp":59},
+            {"rank":60,"name":"Davante Adams","position":"WR","team":"LAR","status":null,"bye":8,"adp":60},
+            {"rank":61,"name":"James Conner","position":"RB","team":"ARI","status":null,"bye":8,"adp":61},
+            {"rank":62,"name":"RJ Harvey","position":"RB","team":"DEN","status":null,"bye":12,"adp":62},
+            {"rank":63,"name":"Chuba Hubbard","position":"RB","team":"CAR","status":null,"bye":14,"adp":63},
+            {"rank":64,"name":"Tony Pollard","position":"RB","team":"TEN","status":null,"bye":10,"adp":64},
+            {"rank":65,"name":"Alvin Kamara","position":"RB","team":"NO","status":null,"bye":11,"adp":65},
+            {"rank":66,"name":"Aaron Jones","position":"RB","team":"MIN","status":null,"bye":6,"adp":66},
+            {"rank":67,"name":"Rome Odunze","position":"WR","team":"CHI","status":null,"bye":5,"adp":67},
+            {"rank":68,"name":"Mark Andrews","position":"TE","team":"BAL","status":null,"bye":7,"adp":68},
+            {"rank":69,"name":"Evan Engram","position":"TE","team":"DEN","status":null,"bye":12,"adp":69},
+            {"rank":70,"name":"Emeka Egbuka","position":"WR","team":"ROOKIE","status":null,"bye":null,"adp":70},
+            {"rank":71,"name":"Jaylen Waddle","position":"WR","team":"MIA","status":null,"bye":12,"adp":71},
+            {"rank":72,"name":"Zay Flowers","position":"WR","team":"BAL","status":null,"bye":7,"adp":72},
+            {"rank":73,"name":"Kaleb Johnson","position":"RB","team":"PIT","status":null,"bye":5,"adp":73},
+            {"rank":74,"name":"Tyrone Tracy Jr.","position":"RB","team":"NYG","status":null,"bye":14,"adp":74},
+            {"rank":75,"name":"David Montgomery","position":"RB","team":"DET","status":null,"bye":8,"adp":75},
+            {"rank":76,"name":"Jaylen Warren","position":"RB","team":"PIT","status":null,"bye":5,"adp":76},
+            {"rank":77,"name":"Jordan Mason","position":"RB","team":"MIN","status":null,"bye":6,"adp":77},
+            {"rank":78,"name":"Travis Kelce","position":"TE","team":"KC","status":null,"bye":10,"adp":78},
+            {"rank":79,"name":"Jauan Jennings","position":"WR","team":"SF","status":"Q","bye":14,"adp":79},
+            {"rank":80,"name":"Ricky Pearsall","position":"WR","team":"SF","status":null,"bye":14,"adp":80},
+            {"rank":81,"name":"Chris Olave","position":"WR","team":"NO","status":null,"bye":11,"adp":81},
+            {"rank":82,"name":"Khalil Shakir","position":"WR","team":"BUF","status":"Q","bye":7,"adp":82},
+            {"rank":83,"name":"Josh Downs","position":"WR","team":"IND","status":"Q","bye":11,"adp":83},
+            {"rank":84,"name":"Jakobi Meyers","position":"WR","team":"LV","status":null,"bye":8,"adp":84},
+            {"rank":85,"name":"Cam Skattebo","position":"RB","team":"NYG","status":null,"bye":14,"adp":85},
+            {"rank":86,"name":"Quinshon Judkins","position":"RB","team":"CLE","status":null,"bye":9,"adp":86},
+            {"rank":87,"name":"J.K. Dobbins","position":"RB","team":"DEN","status":null,"bye":12,"adp":87},
+            {"rank":88,"name":"Austin Ekeler","position":"RB","team":"WAS","status":null,"bye":12,"adp":88},
+            {"rank":89,"name":"Joe Mixon","position":"RB","team":"HOU","status":"NFI-R","bye":6,"adp":89},
+            {"rank":90,"name":"C.J. Stroud","position":"QB","team":"HOU","status":null,"bye":6,"adp":90},
+            {"rank":91,"name":"Anthony Richardson","position":"QB","team":"IND","status":null,"bye":11,"adp":91},
+            {"rank":92,"name":"Kyler Murray","position":"QB","team":"ARI","status":null,"bye":8,"adp":92},
+            {"rank":93,"name":"Dak Prescott","position":"QB","team":"DAL","status":null,"bye":10,"adp":93},
+            {"rank":94,"name":"Jordan Love","position":"QB","team":"GB","status":null,"bye":5,"adp":94},
+            {"rank":95,"name":"Jayden Daniels","position":"QB","team":"WAS","status":null,"bye":12,"adp":95},
+            {"rank":96,"name":"Stefon Diggs","position":"WR","team":"NE","status":"Q","bye":14,"adp":96},
+            {"rank":97,"name":"Michael Pittman","position":"WR","team":"IND","status":null,"bye":11,"adp":97},
+            {"rank":98,"name":"Jerry Jeudy","position":"WR","team":"CLE","status":null,"bye":9,"adp":98},
+            {"rank":99,"name":"Keon Coleman","position":"WR","team":"BUF","status":null,"bye":7,"adp":99},
+            {"rank":100,"name":"Brandon Aiyuk","position":"WR","team":"SF","status":"PUP","bye":14,"adp":100},
+            {"rank":101,"name":"Chris Godwin","position":"WR","team":"TB","status":"Q","bye":9,"adp":101},
+            {"rank":102,"name":"Jake Ferguson","position":"TE","team":"DAL","status":null,"bye":10,"adp":102},
+            {"rank":103,"name":"Colston Loveland","position":"TE","team":"ROOKIE","status":null,"bye":null,"adp":103},
+            {"rank":104,"name":"David Njoku","position":"TE","team":"CLE","status":null,"bye":9,"adp":104},
+            {"rank":105,"name":"Jacory Croskey-Merritt","position":"RB","team":"WAS","status":null,"bye":12,"adp":105},
+            {"rank":106,"name":"Travis Etienne","position":"RB","team":"JAX","status":null,"bye":8,"adp":106},
+            {"rank":107,"name":"Jaydon Blue","position":"RB","team":"DAL","status":"Q","bye":10,"adp":107},
+            {"rank":108,"name":"Brian Robinson Jr.","position":"RB","team":"SF","status":null,"bye":14,"adp":108},
+            {"rank":109,"name":"Bhayshul Tuten","position":"RB","team":"JAX","status":null,"bye":8,"adp":109},
+            {"rank":110,"name":"Javonte Williams","position":"RB","team":"DAL","status":null,"bye":10,"adp":110},
+            {"rank":111,"name":"Braelon Allen","position":"RB","team":"NYJ","status":null,"bye":9,"adp":111},
+            {"rank":112,"name":"Tank Bigsby","position":"RB","team":"JAX","status":null,"bye":8,"adp":112},
+            {"rank":113,"name":"Najee Harris","position":"RB","team":"LAC","status":"Q","bye":12,"adp":113},
+            {"rank":114,"name":"Nick Chubb","position":"RB","team":"HOU","status":null,"bye":6,"adp":114},
+            {"rank":115,"name":"Zach Charbonnet","position":"RB","team":"SEA","status":null,"bye":8,"adp":115},
+            {"rank":116,"name":"Tyjae Spears","position":"RB","team":"TEN","status":"IR","bye":10,"adp":116},
+            {"rank":117,"name":"Rhamondre Stevenson","position":"RB","team":"NE","status":"Q","bye":14,"adp":117},
+            {"rank":118,"name":"Keenan Allen","position":"WR","team":"LAC","status":null,"bye":12,"adp":118},
+            {"rank":119,"name":"Matthew Golden","position":"WR","team":"ROOKIE","status":null,"bye":null,"adp":119},
+            {"rank":120,"name":"Jayden Reed","position":"WR","team":"GB","status":"Q","bye":5,"adp":120},
+            {"rank":121,"name":"Jordan Addison","position":"WR","team":"MIN","status":"SUS","bye":6,"adp":121},
+            {"rank":122,"name":"Marquise Brown","position":"WR","team":"KC","status":"Q","bye":10,"adp":122},
+            {"rank":123,"name":"Darnell Mooney","position":"WR","team":"ATL","status":"Q","bye":5,"adp":123},
+            {"rank":124,"name":"Kyle Williams","position":"WR","team":"NE","status":"Q","bye":14,"adp":124},
+            {"rank":125,"name":"Luther Burden III","position":"WR","team":"CHI","status":null,"bye":5,"adp":125},
+            {"rank":126,"name":"Deebo Samuel Sr.","position":"WR","team":"WAS","status":null,"bye":12,"adp":126},
+            {"rank":127,"name":"Marvin Mims Jr.","position":"WR","team":"DEN","status":"Q","bye":12,"adp":127},
+            {"rank":128,"name":"Christian Kirk","position":"WR","team":"HOU","status":null,"bye":6,"adp":128},
+            {"rank":129,"name":"Josh Palmer","position":"WR","team":"BUF","status":null,"bye":7,"adp":129},
+            {"rank":130,"name":"Cooper Kupp","position":"WR","team":"SEA","status":null,"bye":8,"adp":130},
+            {"rank":131,"name":"DeMario Douglas","position":"WR","team":"NE","status":null,"bye":14,"adp":131},
+            {"rank":132,"name":"Jalen Coker","position":"WR","team":"CAR","status":"IR","bye":14,"adp":132},
+            {"rank":133,"name":"Rashod Bateman","position":"WR","team":"BAL","status":null,"bye":7,"adp":133},
+            {"rank":134,"name":"Brock Purdy","position":"QB","team":"SF","status":null,"bye":14,"adp":134},
+            {"rank":135,"name":"Tua Tagovailoa","position":"QB","team":"MIA","status":null,"bye":12,"adp":135},
+            {"rank":136,"name":"Justin Herbert","position":"QB","team":"LAC","status":null,"bye":12,"adp":136},
+            {"rank":137,"name":"Trevor Lawrence","position":"QB","team":"JAX","status":null,"bye":8,"adp":137},
+            {"rank":138,"name":"Jared Goff","position":"QB","team":"DET","status":null,"bye":8,"adp":138},
+            {"rank":139,"name":"Kirk Cousins","position":"QB","team":"ATL","status":null,"bye":5,"adp":139},
+            {"rank":140,"name":"Matthew Stafford","position":"QB","team":"LAR","status":null,"bye":8,"adp":140},
+            {"rank":141,"name":"Caleb Williams","position":"QB","team":"CHI","status":null,"bye":5,"adp":141},
+            {"rank":142,"name":"Aaron Rodgers","position":"QB","team":"PIT","status":null,"bye":5,"adp":142},
+            {"rank":143,"name":"Geno Smith","position":"QB","team":"LV","status":null,"bye":8,"adp":143},
+            {"rank":144,"name":"Baker Mayfield","position":"QB","team":"TB","status":null,"bye":9,"adp":144},
+            {"rank":145,"name":"Deshaun Watson","position":"QB","team":"CLE","status":null,"bye":9,"adp":145},
+            {"rank":146,"name":"Russell Wilson","position":"QB","team":"NYG","status":null,"bye":14,"adp":146},
+            {"rank":147,"name":"Will Levis","position":"QB","team":"TEN","status":"IR","bye":10,"adp":147},
+            {"rank":148,"name":"Bryce Young","position":"QB","team":"CAR","status":null,"bye":14,"adp":148},
+            {"rank":149,"name":"Derek Carr","position":"QB","team":"NO","status":null,"bye":11,"adp":149},
+            {"rank":150,"name":"Justin Fields","position":"QB","team":"NYJ","status":null,"bye":9,"adp":150},
+            {"rank":151,"name":"Daniel Jones","position":"QB","team":"IND","status":null,"bye":11,"adp":151},
+            {"rank":152,"name":"Drake Maye","position":"QB","team":"NE","status":null,"bye":14,"adp":152},
+            {"rank":153,"name":"J.J. McCarthy","position":"QB","team":"MIN","status":null,"bye":6,"adp":153},
+            {"rank":154,"name":"Bo Nix","position":"QB","team":"DEN","status":null,"bye":12,"adp":154},
+            {"rank":155,"name":"Michael Penix Jr.","position":"QB","team":"ATL","status":null,"bye":5,"adp":155},
+            {"rank":156,"name":"Gardner Minshew","position":"QB","team":"KC","status":null,"bye":10,"adp":156},
+            {"rank":157,"name":"Sam Howell","position":"QB","team":"WAS","status":null,"bye":12,"adp":157},
+            {"rank":158,"name":"Aidan O'Connell","position":"QB","team":"LV","status":"IR","bye":8,"adp":158},
+            {"rank":159,"name":"Jake Browning","position":"QB","team":"BAL","status":null,"bye":7,"adp":159},
+            {"rank":160,"name":"Kenny Pickett","position":"QB","team":"PHI","status":null,"bye":9,"adp":160},
+            {"rank":161,"name":"Jimmy Garoppolo","position":"QB","team":"LAR","status":null,"bye":8,"adp":161},
+            {"rank":162,"name":"Jacoby Brissett","position":"QB","team":"ARI","status":null,"bye":8,"adp":162},
+            {"rank":163,"name":"Tyrod Taylor","position":"QB","team":"NYJ","status":null,"bye":9,"adp":163},
+            {"rank":164,"name":"Sam Darnold","position":"QB","team":"SEA","status":null,"bye":8,"adp":164},
+            {"rank":165,"name":"Drew Lock","position":"QB","team":"SEA","status":null,"bye":8,"adp":165},
+            {"rank":166,"name":"Tucker Kraft","position":"TE","team":"GB","status":null,"bye":5,"adp":166},
+            {"rank":167,"name":"Dalton Kincaid","position":"TE","team":"BUF","status":null,"bye":7,"adp":167},
+            {"rank":168,"name":"Kyle Pitts","position":"TE","team":"ATL","status":null,"bye":5,"adp":168},
+            {"rank":169,"name":"Dallas Goedert","position":"TE","team":"PHI","status":"Q","bye":9,"adp":169},
+            {"rank":170,"name":"Jonnu Smith","position":"TE","team":"PIT","status":"Q","bye":5,"adp":170},
+            {"rank":171,"name":"Elijah Arroyo","position":"TE","team":"SEA","status":null,"bye":8,"adp":171},
+            {"rank":172,"name":"Hunter Henry","position":"TE","team":"NE","status":null,"bye":14,"adp":172},
+            {"rank":173,"name":"Brenton Strange","position":"TE","team":"JAX","status":null,"bye":8,"adp":173},
+            {"rank":174,"name":"Cade Otton","position":"TE","team":"TB","status":"Q","bye":9,"adp":174},
+            {"rank":175,"name":"Chig Okonkwo","position":"TE","team":"TEN","status":null,"bye":10,"adp":175},
+            {"rank":176,"name":"Mason Taylor","position":"TE","team":"NYJ","status":null,"bye":9,"adp":176},
+            {"rank":177,"name":"Theo Johnson","position":"TE","team":"NYG","status":null,"bye":14,"adp":177},
+            {"rank":178,"name":"Zach Ertz","position":"TE","team":"WAS","status":null,"bye":12,"adp":178},
+            {"rank":179,"name":"Darren Waller","position":"TE","team":"MIA","status":null,"bye":12,"adp":179},
+            {"rank":180,"name":"Isaiah Likely","position":"TE","team":"BAL","status":"Q","bye":7,"adp":180},
+            {"rank":181,"name":"Dalton Schultz","position":"TE","team":"HOU","status":null,"bye":6,"adp":181},
+            {"rank":182,"name":"Pat Freiermuth","position":"TE","team":"PIT","status":null,"bye":5,"adp":182},
+            {"rank":183,"name":"Ja'Tavion Sanders","position":"TE","team":"CAR","status":null,"bye":14,"adp":183},
+            {"rank":184,"name":"Luke Musgrave","position":"TE","team":"GB","status":null,"bye":5,"adp":184},
+            {"rank":185,"name":"Juwan Johnson","position":"TE","team":"NO","status":null,"bye":11,"adp":185},
+            {"rank":186,"name":"Taysom Hill","position":"TE","team":"NO","status":"PUP","bye":11,"adp":186},
+            {"rank":187,"name":"Michael Mayer","position":"TE","team":"LV","status":null,"bye":8,"adp":187},
+            {"rank":188,"name":"Tanner Hudson","position":"TE","team":"CIN","status":null,"bye":10,"adp":188},
+            {"rank":189,"name":"Tyler Conklin","position":"TE","team":"LAC","status":null,"bye":12,"adp":189},
+            {"rank":190,"name":"Greg Dulcich","position":"TE","team":"DEN","status":null,"bye":12,"adp":190},
+            {"rank":191,"name":"Cole Kmet","position":"TE","team":"CHI","status":null,"bye":5,"adp":191},
+            {"rank":192,"name":"Logan Thomas","position":"TE","team":"WAS","status":null,"bye":12,"adp":192},
+            {"rank":193,"name":"Jelani Woods","position":"TE","team":"IND","status":null,"bye":11,"adp":193},
+            {"rank":194,"name":"Noah Fant","position":"TE","team":"CIN","status":null,"bye":10,"adp":194},
+            {"rank":195,"name":"Gerald Everett","position":"TE","team":"CHI","status":null,"bye":5,"adp":195},
+            {"rank":196,"name":"Mike Gesicki","position":"TE","team":"CIN","status":"Q","bye":10,"adp":196},
+            {"rank":197,"name":"Hayden Hurst","position":"TE","team":"LAC","status":null,"bye":12,"adp":197},
+            {"rank":198,"name":"Ben Sinnott","position":"TE","team":"WAS","status":null,"bye":12,"adp":198},
+            {"rank":199,"name":"Chris Rodriguez Jr.","position":"RB","team":"WAS","status":null,"bye":12,"adp":199},
+            {"rank":200,"name":"Woody Marks","position":"RB","team":"HOU","status":null,"bye":6,"adp":200},
+            {"rank":201,"name":"Ollie Gordon II","position":"RB","team":"MIA","status":null,"bye":12,"adp":201},
+            {"rank":202,"name":"Tyler Allgeier","position":"RB","team":"ATL","status":null,"bye":5,"adp":202},
+            {"rank":203,"name":"DJ Giddens","position":"RB","team":"IND","status":null,"bye":11,"adp":203},
+            {"rank":204,"name":"Rico Dowdle","position":"RB","team":"CAR","status":null,"bye":14,"adp":204},
+            {"rank":205,"name":"Jerome Ford","position":"RB","team":"CLE","status":null,"bye":9,"adp":205},
+            {"rank":206,"name":"Tahj Brooks","position":"RB","team":"CIN","status":null,"bye":10,"adp":206},
+            {"rank":207,"name":"Trey Benson","position":"RB","team":"ARI","status":null,"bye":8,"adp":207},
+            {"rank":208,"name":"Dameon Pierce","position":"RB","team":"HOU","status":null,"bye":6,"adp":208},
+            {"rank":209,"name":"Dylan Sampson","position":"RB","team":"CLE","status":null,"bye":9,"adp":209},
+            {"rank":210,"name":"Kyle Monangai","position":"RB","team":"CHI","status":"Q","bye":5,"adp":210},
+            {"rank":211,"name":"Ray Davis","position":"RB","team":"BUF","status":null,"bye":7,"adp":211},
+            {"rank":212,"name":"Sean Tucker","position":"RB","team":"TB","status":null,"bye":9,"adp":212},
+            {"rank":213,"name":"Blake Corum","position":"RB","team":"LAR","status":null,"bye":8,"adp":213},
+            {"rank":214,"name":"Isaac Guerendo","position":"RB","team":"SF","status":null,"bye":14,"adp":214},
+            {"rank":215,"name":"Jarquez Hunter","position":"RB","team":"LAR","status":null,"bye":8,"adp":215},
+            {"rank":216,"name":"Rachaad White","position":"RB","team":"TB","status":"Q","bye":9,"adp":216},
+            {"rank":217,"name":"Roschon Johnson","position":"RB","team":"CHI","status":"Q","bye":5,"adp":217},
+            {"rank":218,"name":"MarShawn Lloyd","position":"RB","team":"GB","status":"IR","bye":5,"adp":218},
+            {"rank":219,"name":"Devin Singletary","position":"RB","team":"NYG","status":null,"bye":14,"adp":219},
+            {"rank":220,"name":"Elijah Mitchell","position":"RB","team":"KC","status":null,"bye":10,"adp":220},
+            {"rank":221,"name":"Jordan James","position":"RB","team":"SF","status":"Q","bye":14,"adp":221},
+            {"rank":222,"name":"Samaje Perine","position":"RB","team":"CIN","status":null,"bye":10,"adp":222},
+            {"rank":223,"name":"Kareem Hunt","position":"RB","team":"KC","status":null,"bye":10,"adp":223},
+            {"rank":224,"name":"Miles Sanders","position":"RB","team":"DAL","status":"Q","bye":10,"adp":224},
+            {"rank":225,"name":"Jaleel McLaughlin","position":"RB","team":"DEN","status":null,"bye":12,"adp":225},
+            {"rank":226,"name":"Jaylen Wright","position":"RB","team":"MIA","status":"D","bye":12,"adp":226},
+            {"rank":227,"name":"Justice Hill","position":"RB","team":"BAL","status":null,"bye":7,"adp":227},
+            {"rank":228,"name":"Emanuel Wilson","position":"RB","team":"GB","status":null,"bye":5,"adp":228},
+            {"rank":229,"name":"Audric Estimé","position":"RB","team":"DEN","status":null,"bye":12,"adp":229},
+            {"rank":230,"name":"Antonio Gibson","position":"RB","team":"NE","status":null,"bye":14,"adp":230},
+            {"rank":231,"name":"Rashid Shaheed","position":"WR","team":"NO","status":null,"bye":11,"adp":231},
+            {"rank":232,"name":"Adam Thielen","position":"WR","team":"MIN","status":null,"bye":6,"adp":232},
+            {"rank":233,"name":"Wan'Dale Robinson","position":"WR","team":"NYG","status":null,"bye":14,"adp":233},
+            {"rank":234,"name":"Jayden Higgins","position":"WR","team":"HOU","status":null,"bye":6,"adp":234},
+            {"rank":235,"name":"Elic Ayomanor","position":"WR","team":"TEN","status":null,"bye":10,"adp":235},
+            {"rank":236,"name":"Xavier Legette","position":"WR","team":"CAR","status":null,"bye":14,"adp":236},
+            {"rank":237,"name":"Romeo Doubs","position":"WR","team":"GB","status":null,"bye":5,"adp":237},
+            {"rank":238,"name":"Tre Harris","position":"WR","team":"LAC","status":"Q","bye":12,"adp":238},
+            {"rank":239,"name":"Jalen McMillan","position":"WR","team":"TB","status":"IR","bye":9,"adp":239},
+            {"rank":240,"name":"DeAndre Hopkins","position":"WR","team":"BAL","status":"Q","bye":7,"adp":240},
+            {"rank":241,"name":"Alec Pierce","position":"WR","team":"IND","status":null,"bye":11,"adp":241},
+            {"rank":242,"name":"Diontae Johnson","position":"WR","team":"CAR","status":null,"bye":14,"adp":242},
+            {"rank":243,"name":"Jack Bech","position":"WR","team":"LV","status":null,"bye":8,"adp":243},
+            {"rank":244,"name":"Jaylin Noel","position":"WR","team":"HOU","status":null,"bye":6,"adp":244},
+            {"rank":245,"name":"Isaac TeSlaa","position":"WR","team":"DET","status":null,"bye":8,"adp":245},
+            {"rank":246,"name":"KeAndre Lambert-Smith","position":"WR","team":"LAC","status":null,"bye":12,"adp":246},
+            {"rank":247,"name":"Quentin Johnston","position":"WR","team":"LAC","status":"Q","bye":12,"adp":247},
+            {"rank":248,"name":"Cedric Tillman","position":"WR","team":"CLE","status":null,"bye":9,"adp":248},
+            {"rank":249,"name":"Trey Palmer","position":"WR","team":"NO","status":null,"bye":11,"adp":249},
+            {"rank":250,"name":"Demarcus Robinson","position":"WR","team":"LAR","status":null,"bye":8,"adp":250},
+            {"rank":251,"name":"Dontayvion Wicks","position":"WR","team":"GB","status":"Q","bye":5,"adp":251},
+            {"rank":252,"name":"Jahan Dotson","position":"WR","team":"PHI","status":null,"bye":9,"adp":252},
+            {"rank":253,"name":"Elijah Moore","position":"WR","team":"BUF","status":null,"bye":7,"adp":253},
+            {"rank":254,"name":"Pat Bryant","position":"WR","team":"TB","status":null,"bye":9,"adp":254},
+            {"rank":255,"name":"Adonai Mitchell","position":"WR","team":"IND","status":null,"bye":11,"adp":255},
+            {"rank":256,"name":"Troy Franklin","position":"WR","team":"DEN","status":null,"bye":12,"adp":256},
+            {"rank":257,"name":"Jalen Nailor","position":"WR","team":"MIN","status":null,"bye":6,"adp":257},
+            {"rank":258,"name":"Darius Slayton","position":"WR","team":"NYG","status":null,"bye":14,"adp":258},
+            {"rank":259,"name":"Adam Randall","position":"WR","team":"CLE","status":null,"bye":9,"adp":259},
+            {"rank":260,"name":"Jaylen Lane","position":"WR","team":"WAS","status":null,"bye":12,"adp":260},
+            {"rank":261,"name":"Brandon Aubrey","position":"K","team":"DAL","status":null,"bye":10,"adp":261},
+            {"rank":262,"name":"Cameron Dicker","position":"K","team":"LAC","status":null,"bye":12,"adp":262},
+            {"rank":263,"name":"Chris Boswell","position":"K","team":"PIT","status":null,"bye":5,"adp":263},
+            {"rank":264,"name":"Jake Bates","position":"K","team":"DET","status":null,"bye":8,"adp":264},
+            {"rank":265,"name":"Chase McLaughlin","position":"K","team":"TB","status":null,"bye":9,"adp":265},
+            {"rank":266,"name":"Ka'imi Fairbairn","position":"K","team":"HOU","status":null,"bye":6,"adp":266},
+            {"rank":267,"name":"Harrison Butker","position":"K","team":"KC","status":null,"bye":10,"adp":267},
+            {"rank":268,"name":"Evan McPherson","position":"K","team":"CIN","status":null,"bye":10,"adp":268},
+            {"rank":269,"name":"Will Reichard","position":"K","team":"MIN","status":null,"bye":6,"adp":269},
+            {"rank":270,"name":"Jake Elliott","position":"K","team":"PHI","status":null,"bye":9,"adp":270},
+            {"rank":271,"name":"Younghoe Koo","position":"K","team":"ATL","status":null,"bye":5,"adp":271},
+            {"rank":272,"name":"Wil Lutz","position":"K","team":"DEN","status":null,"bye":12,"adp":272},
+            {"rank":273,"name":"Jason Sanders","position":"K","team":"MIA","status":"IR","bye":12,"adp":273},
+            {"rank":274,"name":"Tyler Bass","position":"K","team":"BUF","status":null,"bye":7,"adp":274},
+            {"rank":275,"name":"Joshua Karty","position":"K","team":"LAR","status":null,"bye":8,"adp":275},
+            {"rank":276,"name":"Matt Gay","position":"K","team":"WAS","status":null,"bye":12,"adp":276},
+            {"rank":277,"name":"Jake Moody","position":"K","team":"SF","status":null,"bye":14,"adp":277},
+            {"rank":278,"name":"Brandon McManus","position":"K","team":"GB","status":null,"bye":5,"adp":278},
+            {"rank":279,"name":"Daniel Carlson","position":"K","team":"LV","status":null,"bye":8,"adp":279},
+            {"rank":280,"name":"Jason Myers","position":"K","team":"SEA","status":null,"bye":8,"adp":280},
+            {"rank":281,"name":"Cam Little","position":"K","team":"JAX","status":null,"bye":8,"adp":281},
+            {"rank":282,"name":"Chad Ryland","position":"K","team":"ARI","status":null,"bye":8,"adp":282},
+            {"rank":283,"name":"Cairo Santos","position":"K","team":"CHI","status":null,"bye":5,"adp":283},
+            {"rank":284,"name":"Joey Slye","position":"K","team":"TEN","status":null,"bye":10,"adp":284},
+            {"rank":285,"name":"Blake Grupe","position":"K","team":"NO","status":null,"bye":11,"adp":285},
+            {"rank":286,"name":"Dustin Hopkins","position":"K","team":"CLE","status":null,"bye":9,"adp":286},
+            {"rank":287,"name":"Anders Carlson","position":"K","team":"GB","status":null,"bye":5,"adp":287},
+            {"rank":288,"name":"Matthew Wright","position":"K","team":"PIT","status":null,"bye":5,"adp":288},
+            {"rank":289,"name":"Graham Gano","position":"K","team":"NYG","status":null,"bye":14,"adp":289},
+            {"rank":290,"name":"John Parker Romo","position":"K","team":"MIN","status":null,"bye":6,"adp":290},
+            {"rank":291,"name":"Spencer Shrader","position":"K","team":"IND","status":null,"bye":11,"adp":291},
+            {"rank":292,"name":"Jude McAtamney","position":"K","team":"NYG","status":null,"bye":14,"adp":292},
+            {"rank":293,"name":"Philadelphia Eagles","position":"DEF","team":"PHI","status":null,"bye":9,"adp":293},
+            {"rank":294,"name":"Denver Broncos","position":"DEF","team":"DEN","status":null,"bye":12,"adp":294},
+            {"rank":295,"name":"Pittsburgh Steelers","position":"DEF","team":"PIT","status":null,"bye":5,"adp":295},
+            {"rank":296,"name":"Baltimore Ravens","position":"DEF","team":"BAL","status":null,"bye":7,"adp":296},
+            {"rank":297,"name":"Houston Texans","position":"DEF","team":"HOU","status":null,"bye":6,"adp":297},
+            {"rank":298,"name":"Buffalo Bills","position":"DEF","team":"BUF","status":null,"bye":7,"adp":298},
+            {"rank":299,"name":"Kansas City Chiefs","position":"DEF","team":"KC","status":null,"bye":10,"adp":299},
+            {"rank":300,"name":"Minnesota Vikings","position":"DEF","team":"MIN","status":null,"bye":6,"adp":300},
+            {"rank":301,"name":"Detroit Lions","position":"DEF","team":"DET","status":null,"bye":8,"adp":301},
+            {"rank":302,"name":"Los Angeles Rams","position":"DEF","team":"LAR","status":null,"bye":8,"adp":302},
+            {"rank":303,"name":"Los Angeles Chargers","position":"DEF","team":"LAC","status":null,"bye":12,"adp":303},
+            {"rank":304,"name":"New York Giants","position":"DEF","team":"NYG","status":null,"bye":14,"adp":304},
+            {"rank":305,"name":"Washington Commanders","position":"DEF","team":"WAS","status":null,"bye":12,"adp":305},
+            {"rank":306,"name":"San Francisco 49ers","position":"DEF","team":"SF","status":null,"bye":14,"adp":306},
+            {"rank":307,"name":"Atlanta Falcons","position":"DEF","team":"ATL","status":null,"bye":5,"adp":307},
+            {"rank":308,"name":"New York Jets","position":"DEF","team":"NYJ","status":null,"bye":9,"adp":308},
+            {"rank":309,"name":"New England Patriots","position":"DEF","team":"NE","status":null,"bye":14,"adp":309},
+            {"rank":310,"name":"Cleveland Browns","position":"DEF","team":"CLE","status":null,"bye":9,"adp":310},
+            {"rank":311,"name":"Chicago Bears","position":"DEF","team":"CHI","status":null,"bye":5,"adp":311},
+            {"rank":312,"name":"Dallas Cowboys","position":"DEF","team":"DAL","status":null,"bye":10,"adp":312},
+            {"rank":313,"name":"Tampa Bay Buccaneers","position":"DEF","team":"TB","status":null,"bye":9,"adp":313},
+            {"rank":314,"name":"Arizona Cardinals","position":"DEF","team":"ARI","status":null,"bye":8,"adp":314},
+            {"rank":315,"name":"Green Bay Packers","position":"DEF","team":"GB","status":null,"bye":5,"adp":315},
+            {"rank":316,"name":"Seattle Seahawks","position":"DEF","team":"SEA","status":null,"bye":8,"adp":316},
+            {"rank":317,"name":"Indianapolis Colts","position":"DEF","team":"IND","status":null,"bye":11,"adp":317},
+            {"rank":318,"name":"Miami Dolphins","position":"DEF","team":"MIA","status":null,"bye":12,"adp":318},
+            {"rank":319,"name":"Cincinnati Bengals","position":"DEF","team":"CIN","status":null,"bye":10,"adp":319},
+            {"rank":320,"name":"New Orleans Saints","position":"DEF","team":"NO","status":null,"bye":11,"adp":320},
+            {"rank":321,"name":"Las Vegas Raiders","position":"DEF","team":"LV","status":null,"bye":8,"adp":321},
+            {"rank":322,"name":"Jacksonville Jaguars","position":"DEF","team":"JAX","status":null,"bye":8,"adp":322},
+            {"rank":323,"name":"Tennessee Titans","position":"DEF","team":"TEN","status":null,"bye":10,"adp":323},
+            {"rank":324,"name":"Carolina Panthers","position":"DEF","team":"CAR","status":null,"bye":14,"adp":324}
+        ];
+
+        // UZMAN ANALİZLERİNDEN OLUŞTURULAN BİLGİ BANKASI
+        const EXPERT_TAKES = {
+            "Christian McCaffrey": "Jamie Eisenberg onu 'sağlıklı olduğunda ligin en iyi oyuncusu' olarak görüyor. Elit RB arayanlar için güvenli bir seçim.",
+            "Josh Jacobs": "Jamie, yedek oyuncusu Marshon Lloyd'un sakatlığı nedeniyle Jacobs'ın yüksek bir potansiyele sahip olduğunu ve 2. turda harika bir değer taşıdığını düşünüyor.",
+            "Tee Higgins": "Fantasy Football Counselor'a göre 3. turda bir WR2 için 'boşa harcanan' bir seçim olabilir. Ancak diğer uzmanlar Joe Burrow ile olan uyumu sayesinde süperstar potansiyeli görüyor.",
+            "Mike Evans": "Godwin'in sakatlığı ve Baker Mayfield ile uyumu sayesinde, yaşına rağmen uzmanlar tarafından hala güvenilir bir WR2 olarak görülüyor.",
+            "RJ Harvey": "Jamie Eisenberg tarafından 5. turda 'çalınmış bir seçim' olarak görülüyor. Denver'ın hücumuna olan güven tam.",
+            "Jaylen Waddle": "Tyreek Hill ve Achane'in sakatlıkları nedeniyle bu sezon patlama yapma potansiyeli yüksek. Heath Cummings onu kolay bir WR2 olarak görüyor.",
+            "David Njoku": "Joe Flacco ile sezonu güçlü bitirmesi, onu birçok uzman için 'lig kazandıran' bir TE yapıyor. Değerinin üzerinde performans gösterebilir.",
+            "Zach Charbonnet": "Kenneth Walker'ın ayak sakatlığı nedeniyle fırsat bulabilir. İyi bir handcuff ve potansiyel bir başlangıç oyuncusu.",
+            "Tank Bigsby": "Fantasy Stock Exchange'in en iyi 'sleeper' listesinde. Etienne'den daha verimli bir koşucu olabilir ve iş yükünü çalabilir.",
+            "Ja'Marr Chase": "Tommy Tram onu 'garanti' bir seçim ve konsensüs 1 numaralı PPR oyuncusu olarak görüyor. Tartışmasız en iyi WR.",
+            "Kyren Williams": "Heath Cummings, çalışkan bir RB olmasını ve takımının ona sözleşme ile güvenmesini seviyor. Matthew Stafford'ın durumu koşu oyununa daha fazla bağımlılık getirebilir.",
+            "Trey McBride": "Heath Cummings'e göre 'en kolay seçimlerden biri' ve TE1 potansiyeli var. Yüksek hedef hacmi bekleniyor.",
+            "Courtland Sutton": "Heath Cummings, Bo Nix ile olan bağlantısı ve net alfa rolü nedeniyle değerinin düşük olduğunu ve mükemmel bir WR2 olduğunu düşünüyor.",
+            "D'Andre Swift": "Ben Johnson yönetimindeki potansiyeli ve istikrarı nedeniyle uzmanlar tarafından beğeniliyor. İlk 5'teki hücum hattı büyük bir avantaj.",
+            "Patrick Mahomes": "QB bekletme stratejisi uygulansa bile, Heath Cummings'e göre Mahomes pas geçilemeyecek kadar iyi bir değer.",
+            "Drake London": "Jamie Eisenberg'e göre inanılmaz bir konumda ve üst düzey bir WR2. Michael Penix ile uyumu heyecan verici.",
+            "Malik Nabers": "Jacqueline Diagino, Russell Wilson'ın gelişiyle hedeflerde lig lideri olma potansiyeli taşıdığını düşünüyor. Yüksek tavanlı bir seçim.",
+            "George Pickens": "Jacqueline Diagino ve Ron Stewart, Dak Prescott ile daha iyi bir durumda olduğunu ve beklentilerin yüksek olduğunu belirtiyor.",
+            "Tony Pollard": "Tyjae Spears'ın sakatlığı (PUP listesi) nedeniyle ilk 4 hafta boyunca ana taşıyıcı olacak. Değeri düşük bir seçim.",
+            "Tyler Warren": "Pat Fitzmaurice'e göre kampın yıldızlarından ve yakalama sonrası bir canavar. Joe'nun sleeper hedeflerinden biri.",
+            "Austin Ekeler": "Fantasy Stock Exchange'e göre maliyet açısından daha iyi bir seçenek ve Washington'da 3. down'larda güvenilir bir isim.",
+            "Dylan Sampson": "Fantasy Stock Exchange'in en iyi 5 'sleeper' listesinde yer alıyor. Judkins'in belirsiz durumu nedeniyle Cleveland'da büyük bir rol kapabilir.",
+            "Breece Hall": "Bazı uzmanlar Jets hücumu ve iş yükünü Brilland Allen ile paylaşma ihtimali nedeniyle endişeli. 5. turda seçilmesi 'cezalandırılmış' bir seçim olarak görülüyor.",
+            "James Conner": "Fantasy Football Counselor, yaşlı ve sakatlık riski taşıdığı için kaçınılması gereken bir oyuncu olarak listeliyor.",
+            "Jameson Williams": "Hedef rekabeti nedeniyle ('too many mouths to feed') bazı uzmanlar tarafından kaçınılması gereken bir oyuncu olarak görülüyor.",
+            "DJ Moore": "Durumu belirsiz. Takıma eklenen yeni silahlar (Odunze, Swift) nedeniyle tavanı sınırlı olabilir.",
+            "Isaac Guerendo": "Jamie Eisenberg'in 'handcuffing' stratejisinde McCaffrey'in yedeği olarak seçtiği isim. Değerli bir sigorta."
+        };
+
+        var draftedPlayers = [];
+        let currentPick = 1;
+        let currentTeamIndex;
+        let yourTeamIndex;
+
+        // ... Script'in geri kalanı önceki cevapta olduğu gibi ...
+
+        const playerSearchInput = document.getElementById('player-search');
+        const positionFilter = document.getElementById('position-filter');
+        const teamHeadersContainer = document.getElementById('team-headers-container');
+        const playerGridContainer = document.getElementById('player-grid-container');
+        const availablePlayersEl = document.getElementById('available-players');
+        const currentPickerBadgeEl = document.getElementById('current-picker-badge');
+        const yourTeamSelect = document.getElementById('your-team-select');
+        const fullViewBtn = document.getElementById('full-view-btn');
+        const draftBoardEl = document.getElementById('draft-board');
+        const yourTeamPanel = document.getElementById('your-team-panel');
+        const strategyRecommendationsEl = document.getElementById('strategy-recommendations');
+        const compactViewBtn = document.getElementById('compact-view-btn');
+        const currentDraftStatusEl = document.getElementById('current-draft-status');
+        const yourRosterInfoEl = document.getElementById('your-roster-info');
+
+        const renderUI = () => {
+            renderDraftBoard();
+            renderYourTeamSelect();
+            updateUI();
+        };
+
+        const renderDraftBoard = () => {
+            teamHeadersContainer.innerHTML = '';
+            playerGridContainer.innerHTML = '';
+
+            DRAFT_ORDER.forEach((name, index) => {
+                const teamHeader = document.createElement('div');
+                teamHeader.id = `team-header-${index}`;
+                teamHeader.className = `draft-team text-white`;
+                teamHeader.innerHTML = `<div class="text-sm truncate">${name}</div><div class="text-xs text-gray-400">#${index + 1}</div>`;
+                teamHeadersContainer.appendChild(teamHeader);
+            });
+
+            for (let round = 0; round < 18; round++) {
+                const roundHeader = document.createElement('div');
+                roundHeader.className = 'sticky left-0 bg-[#0d1117] z-10 flex items-center justify-center text-sm font-semibold text-gray-400';
+                roundHeader.textContent = `Tur ${round + 1}`;
+                playerGridContainer.appendChild(roundHeader);
+
+                for (let teamIndex = 0; teamIndex < 12; teamIndex++) {
+                    const isForward = round % 2 === 0;
+                    const pickIndex = isForward ? (round * 12) + teamIndex : (round * 12) + (11 - teamIndex);
+                    const playerSlot = document.createElement('div');
+                    playerSlot.id = `slot-${pickIndex}`;
+                    playerSlot.className = 'player-card';
+                    playerSlot.innerHTML = `<div class="text-gray-500 text-sm">Pick #${pickIndex + 1}</div>`;
+                    playerGridContainer.appendChild(playerSlot);
+                }
+            }
+        };
+
+        const renderYourTeamSelect = () => {
+            yourTeamSelect.innerHTML = '';
+            DRAFT_ORDER.forEach((name, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `#${index + 1} - ${name}`;
+                yourTeamSelect.appendChild(option);
+            });
+            yourTeamSelect.value = 0;
+            yourTeamIndex = parseInt(yourTeamSelect.value);
+        };
+
+        const draftPlayer = (player) => {
+            if (currentPick > 12 * 18) return;
+            const draftedBy = DRAFT_ORDER[currentTeamIndex];
+            const pick = { player, draftedBy, pickNumber: currentPick };
+            draftedPlayers.push(pick);
+
+            const slotIndex = pick.pickNumber - 1;
+            const slotEl = document.getElementById(`slot-${slotIndex}`);
+            if (slotEl) {
+                slotEl.innerHTML = `<div class="player-card-header text-white">${player.name}</div><div class="player-card-sub">${player.position} - ${player.team}</div>`;
+                slotEl.classList.add('player-card-selected');
+            }
+
+            currentPick++;
+            updateUI();
+        };
+
+        const createPlayerCard = (player) => {
+            const card = document.createElement('div');
+            card.className = `p-3 rounded-lg shadow-md flex items-center justify-between transition-colors duration-200 bg-gray-700 hover:bg-gray-600 player-list-item`;
+
+            let statusHtml = '';
+            if(player.status) {
+                statusHtml = `<span class="status-badge status-${player.status.toLowerCase().replace('-r', '')}">${player.status}</span>`;
+            }
+
+            card.innerHTML = `
+                <div>
+                    <div class="flex items-center">
+                        <span class="text-white text-lg font-bold">${player.name}</span>
+                        ${statusHtml}
+                    </div>
+                    <span class="text-gray-400 text-sm">(${player.position} - ${player.team})</span>
+                    <div class="flex flex-wrap gap-2 mt-1 text-xs">
+                        <span class="bg-gray-600 text-gray-300 px-2 py-0.5 rounded-full">Genel Rank: ${player.rank}</span>
+                        <span class="bg-indigo-900 text-indigo-300 px-2 py-0.5 rounded-full">Pozisyon Rank: ${player.position}${player.positional_rank}</span>
+                        ${player.bye ? `<span class="bg-gray-600 text-gray-300 px-2 py-0.5 rounded-full">Bye: ${player.bye}</span>` : ''}
+                    </div>
+                </div>
+                <button class="draft-btn bg-blue-600 text-white font-bold py-2 px-4 rounded-xl hover:bg-blue-700 transition-colors duration-200" data-rank="${player.rank}">Draft Et</button>
+            `;
+            card.querySelector('.draft-btn').addEventListener('click', () => draftPlayer(player));
+            return card;
+        };
+
+        const renderMyRosterSummary = () => {
+            const myTeamName = DRAFT_ORDER[yourTeamIndex];
+            const myPlayers = draftedPlayers.filter(p => p.draftedBy === myTeamName).map(p => p.player);
+
+            const rosterCounts = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
+            myPlayers.forEach(player => {
+                if (rosterCounts.hasOwnProperty(player.position)) {
+                    rosterCounts[player.position]++;
+                }
+            });
+
+            const posColors = {
+                QB: 'bg-red-900 text-red-300',
+                RB: 'bg-green-900 text-green-300',
+                WR: 'bg-blue-900 text-blue-300',
+                TE: 'bg-purple-900 text-purple-300',
+                K: 'bg-yellow-900 text-yellow-300',
+                DEF: 'bg-gray-600 text-gray-300',
+            }
+
+            let summaryHtml = '<div class="flex flex-wrap gap-2 mt-2">';
+            let hasPlayers = false;
+            for(const pos in rosterCounts) {
+                if (rosterCounts[pos] > 0) {
+                    hasPlayers = true;
+                    summaryHtml += `<span class="${posColors[pos]} text-xs font-semibold px-2.5 py-1 rounded">${pos}: ${rosterCounts[pos]}</span>`;
+                }
+            }
+
+            if (!hasPlayers) {
+                summaryHtml += '<span>Henüz oyuncu seçilmedi.</span>';
+            }
+            summaryHtml += '</div>';
+
+            yourRosterInfoEl.innerHTML = summaryHtml;
+        };
+
+        const renderStrategyRecommendations = () => {
+            strategyRecommendationsEl.innerHTML = '';
+            const draftedRanks = new Set(draftedPlayers.map(p => p.player.rank));
+            const available = ALL_PLAYERS_DATA.filter(p => !draftedRanks.has(p.rank));
+            const myPicks = draftedPlayers.filter(p => p.draftedBy === DRAFT_ORDER[yourTeamIndex]).map(p => p.player);
+
+            const createRecommendationBlock = (rec) => {
+                if (!rec || !rec.players || rec.players.length === 0) return;
+                const block = document.createElement('div');
+                block.className = 'card p-4 rounded-xl flex flex-col';
+                block.innerHTML = `
+                    <div>
+                        <h3 class="text-lg font-bold text-white mb-2">${rec.title}</h3>
+                        <p class="text-sm text-gray-400 mb-4">${rec.description}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-auto">
+                        ${rec.players.map(p => `
+                            <div class="player-card h-16">
+                                <div class="player-card-header">${p.name}</div>
+                                <div class="player-card-sub">${p.position} - ${p.team}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                strategyRecommendationsEl.appendChild(block);
+            };
+
+            const recommendations = getAdvancedRecommendations(available, myPicks, currentPick);
+            recommendations.forEach(createRecommendationBlock);
+        };
+
+        const getAdvancedRecommendations = (available, myPicks, currentPick) => {
+            let recs = [];
+            const round = Math.floor((currentPick - 1) / 12) + 1;
+            const myRoster = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 };
+            myPicks.forEach(p => { myRoster[p.position] = (myRoster[p.position] || 0) + 1; });
+
+            // 1. Best Player Available
+            const bpaPlayers = available.slice(0, 4);
+            let bpaDescription = "Pozisyondan bağımsız, puan potansiyeli en yüksek olan ve takıma en çok değer katacak oyuncular.";
+            const expertTakeBPA = EXPERT_TAKES[bpaPlayers[0].name];
+            if (expertTakeBPA) {
+                bpaDescription += ` <strong>Uzman Notu:</strong> ${expertTakeBPA}`;
+            }
+            recs.push({ title: "En İyi Mevcut Oyuncu (BPA)", description: bpaDescription, players: bpaPlayers });
+
+            // 2. Positional Need
+            let needPosition = null;
+            if (round > 2 && round < 12) {
+                if (myRoster.RB < round / 3.5) needPosition = 'RB';
+                else if (myRoster.WR < round / 3.5) needPosition = 'WR';
+                else if (round > 6 && myRoster.TE === 0) needPosition = 'TE';
+                else if (round > 8 && myRoster.QB === 0) needPosition = 'QB';
+
+                if (needPosition) {
+                    recs.push({
+                        title: `Pozisyon İhtiyacı: ${needPosition}`,
+                        description: `Kadronuzda ${needPosition} pozisyonu zayıf görünüyor. Bu eksiği kapatmak için en iyi seçenekler.`,
+                        players: available.filter(p => p.position === needPosition).slice(0, 4)
+                    });
+                }
+            }
+
+            // 3. ADP Value Picks
+            const adpValuePicks = available.filter(p => p.adp > currentPick && p.adp < currentPick + 25).slice(0, 4);
+            if (round > 3 && adpValuePicks.length > 1) {
+                let adpDescription = "Bu oyuncular, sıralamalarına göre bu noktaya kadar düşmemeliydi. Draft'ın 'kelepirleri' olabilirler.";
+                const expertTakeADP = EXPERT_TAKES[adpValuePicks[0].name];
+                if (expertTakeADP) {
+                    adpDescription += ` <strong>Uzman Notu (${adpValuePicks[0].name}):</strong> ${expertTakeADP}`;
+                }
+                recs.push({
+                    title: "Düşen Değerler (ADP Fırsatı)",
+                    description: adpDescription,
+                    players: adpValuePicks
+                });
+            }
+
+            // 4. Expert Sleepers
+            if (round > 6) {
+                 const sleeperPicks = available.filter(p => EXPERT_TAKES[p.name] && (EXPERT_TAKES[p.name].toLowerCase().includes('sleeper') || EXPERT_TAKES[p.name].toLowerCase().includes('çalınmış'))).slice(0, 4);
+                 if (sleeperPicks.length > 0) {
+                     recs.push({
+                         title: "Radardaki Uykucular (Sleepers)",
+                         description: "Uzmanların 'potansiyel patlama yapacak' dediği, draft'ın sonlarında büyük değer sağlayabilecek oyuncular.",
+                         players: sleeperPicks
+                     });
+                 }
+            }
+
+            return recs.slice(0, 4);
+        };
+
+        const renderAvailablePlayers = () => {
+            availablePlayersEl.innerHTML = '';
+            const draftedRanks = new Set(draftedPlayers.map(p => p.player.rank));
+            const searchTerm = playerSearchInput.value.toLowerCase();
+            const selectedPosition = positionFilter.value;
+
+            const filteredPlayers = ALL_PLAYERS_DATA.filter(p => {
+                const isDrafted = draftedRanks.has(p.rank);
+                const matchesSearch = p.name.toLowerCase().includes(searchTerm) || (p.team && p.team.toLowerCase().includes(searchTerm));
+                const matchesPosition = selectedPosition === "ALL" || p.position === selectedPosition;
+                return !isDrafted && matchesSearch && matchesPosition;
+            }).sort((a, b) => a.adp - b.adp);
+
+            filteredPlayers.slice(0, 100).forEach(player => {
+                availablePlayersEl.appendChild(createPlayerCard(player));
+            });
+        };
+
+        const updateUI = () => {
+            const round = Math.floor((currentPick - 1) / 12);
+            const pickInRound = (currentPick - 1) % 12;
+            currentTeamIndex = (round % 2 === 0) ? pickInRound : (11 - pickInRound);
+
+            document.querySelectorAll('.draft-team').forEach(el => el.classList.remove('current-pick-highlight', 'current-pick-team'));
+            const currentTeamHeader = document.getElementById(`team-header-${currentTeamIndex}`);
+            if (currentTeamHeader) {
+                currentTeamHeader.classList.add('current-pick-highlight', 'current-pick-team');
+            }
+
+            currentPickerBadgeEl.textContent = `SIRA ${DRAFT_ORDER[currentTeamIndex]}!`;
+
+            const isYourTurn = currentTeamIndex === yourTeamIndex;
+            if (isYourTurn) {
+                currentPickerBadgeEl.classList.add('bg-green-500');
+                currentPickerBadgeEl.classList.remove('bg-blue-600');
+            } else {
+                currentPickerBadgeEl.classList.remove('bg-green-500');
+                currentPickerBadgeEl.classList.add('bg-blue-600');
+            }
+
+            currentDraftStatusEl.textContent = `Tur ${round + 1}, Pick ${currentPick}`;
+
+            renderAvailablePlayers();
+            renderStrategyRecommendations();
+            renderMyRosterSummary();
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Pozisyon ranklarını hesapla
+            const positionalCounters = { QB: 1, RB: 1, WR: 1, TE: 1, K: 1, DEF: 1 };
+            ALL_PLAYERS_DATA.forEach(player => {
+                if (positionalCounters[player.position]) {
+                    player.positional_rank = positionalCounters[player.position];
+                    positionalCounters[player.position]++;
+                }
+            });
+
+            playerSearchInput.addEventListener('input', renderAvailablePlayers);
+            positionFilter.addEventListener('change', renderAvailablePlayers);
+            yourTeamSelect.addEventListener('change', (e) => {
+                yourTeamIndex = parseInt(e.target.value);
+                updateUI();
+            });
+            fullViewBtn.addEventListener('click', () => {
+                draftBoardEl.style.maxHeight = 'none';
+            });
+            compactViewBtn.addEventListener('click', () => {
+                draftBoardEl.style.maxHeight = '400px';
+            });
+
+            renderUI();
+        });
+    </script>
+</body>
+</html>
