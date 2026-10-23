@@ -1,67 +1,58 @@
 # Anka Fantasy Football - Draft Asistanı 2025
 
-![Status](https://img.shields.io/badge/Status-Tamamland%C4%B1-brightgreen)
-![Versiyon](https://img.shields.io/badge/Versiyon-1.0.0-blue)
-![Teknoloji](https://img.shields.io/badge/Teknoloji-HTML/CSS/JS-orange)
-![Framework](https://img.shields.io/badge/Framework-TailwindCSS-38B2AC)
+12 takımlı, PPR, snake formatındaki bir fantasy football ligi için hazırlanmış, tek bir HTML dosyasından oluşan draft asistanı. 2025 sezonu oyuncu sıralamalarını, bye haftalarını ve uzman notlarını dosyanın içinde taşır; draft sırasında seçimleri tahtaya işler ve kendi takımın için öneri üretir. Sunucu, kurulum ya da derleme gerektirmez.
 
-*Mükemmel draft'ınız için ihtiyacınız olan tek yardımcı. Veri ve uzman analizlerini birleştiren akıllı asistan.*
+## Özellikler
 
+- **Snake draft tahtası:** 12 takım × 18 tur. Her seçim ("Draft Et" düğmesi) tahtaya işlenir, sırası gelen takım vurgulanır. Tam ve sıkıştırılmış görünüm arasında geçiş yapılabilir.
+- **"Benim Sıram" seçimi:** Draft sırasındaki herhangi bir takımı kendi takımın olarak seçersin; öneriler ve kadro özeti o takıma göre hesaplanır.
+- **Öneri paneli** (her pickte en fazla 4 blok):
+  - **BPA:** Mevcut en iyi oyuncular, varsa uzman notuyla.
+  - **Pozisyon ihtiyacı:** Kadrondaki eksik pozisyona göre öneri.
+  - **Düşen değerler (ADP fırsatı):** Sıralamasına göre beklenenden geç kalan oyuncular.
+  - **Radardaki uykucular:** 6. turdan sonra, uzman notunda "sleeper" olarak geçen oyuncular.
+- **Oyuncu listesi:** 324 oyuncu (QB, RB, WR, TE, K, DEF); genel sıra, pozisyon sırası (ör. RB5), takım, bye haftası ve durum etiketi (Q, IR, SUS, PUP, D). İsim/takım araması ve pozisyon filtresi; liste ADP'ye göre sıralanır ve ilk 100 müsait oyuncu gösterilir.
+- **Kadro özeti:** Seçtiğin takımın pozisyon dağılımı (QB/RB/WR/TE/K/DEF).
 
-## 📝 Proje Hakkında
+## Teknoloji yığını
 
-**Anka Fantasy Football Draft Asistanı**, 12 takımlı, PPR (Puan Başına Yakalama) ve Snake Draft formatındaki fantezi futbol ligleri için özel olarak tasarlanmış, web tabanlı bir yardımcı araçtır. Bu proje, standart oyuncu sıralamalarının ötesine geçerek, onlarca farklı uzmanın analizlerini, oyuncu kademelerini (tiers), uyuyan (sleeper) potansiyellerini ve risk faktörlerini tek bir akıllı algoritma altında birleştirir.
+- Tek dosya: HTML + vanilla JavaScript
+- Tailwind CSS (CDN: `cdn.tailwindcss.com`)
+- Google Fonts (Inter, Playfair Display)
 
-Draft sırasında size sadece "kimin en iyi olduğunu" değil, aynı zamanda takımınızın ihtiyacına, draft'ın gidişatına ve uzmanların ortak görüşüne göre **en stratejik hamlenin ne olduğunu** gösterir.
+Stil ve yazı tipleri CDN'den yüklendiği için sayfa açılırken internet bağlantısı gerekir.
 
-## ✨ Ana Özellikler
+## Klasör yapısı
 
-* **📊 Dinamik Draft Tahtası:**
-    * 12 takımlı `snake` draft formatını tam olarak simüle eder.
-    * Yapılan her seçimi anlık olarak tahtaya işler ve tüm arayüzü günceller.
-    * O an sırası gelen takımı görsel olarak öne çıkarır.
+```
+nfl-fantasy-draft-assistant-2025/
+├── nfl-fantasy-2025.html   # Uygulamanın tamamı (arayüz, veri, öneri mantığı)
+└── README.md
+```
 
-* **🧠 "Mükemmel Seçim Algoritması" - Akıllı Öneriler:**
-    * **BPA (En İyi Mevcut Oyuncu):** O anki en yüksek potansiyele sahip oyuncuları, ilgili **uzman notlarıyla** birlikte sunar.
-    * **Pozisyon İhtiyacı:** Kadronuzdaki eksiklikleri sürekli analiz eder ve en kritik pozisyondaki en iyi oyuncuları önerir.
-    * **ADP Fırsatları:** Sıralamasına göre beklenenden daha alt sıralara düşmüş, "kelepir" olarak nitelendirilebilecek oyuncuları size bildirir.
-    * **Uzmanların Gözdesi & Uykucular (Sleepers):** Draft'ın turuna göre, uzmanların "mutlaka alın" veya "gizli potansiyel" olarak işaretlediği oyuncuları öne çıkarır.
-    * **Strateji Tespiti:** Yaptığınız seçimlere göre uyguladığınız stratejiyi (örn: "Hero RB", "Zero RB") analiz eder ve bu stratejinin bir sonraki adımı için en mantıklı oyuncuları önerir.
+Dosya içindeki ana parçalar:
 
-* **📈 Gelişmiş Oyuncu Listesi:**
-    * **Hibrit Sıralama:** 300'den fazla oyuncuyu, uzman analizleri ve puan beklentilerine dayalı "optimum" bir genel sıralama (`Genel Rank`) ile sunar.
-    * **Pozisyonel Sıralama:** Her oyuncunun kendi pozisyonu içindeki sırasını (`Pozisyon Rank: RB5, WR12 vb.`) göstererek karar vermeyi kolaylaştırır.
-    * **Filtreleme ve Arama:** Oyuncuları isme veya pozisyona göre (QB, RB, WR, TE, K, DEF) anında filtreleyebilirsiniz.
-    * **Kritik Bilgiler:** Her oyuncu kartında güncel **Bye Haftası** ve sakatlık/ceza **Durumu** (Q, SUS, IR) bilgisi yer alır.
+- `DRAFT_ORDER`: Ligdeki 12 takımın draft sırası (sabit takım adları).
+- `ALL_PLAYERS_DATA`: Oyuncu verisi (`rank`, `name`, `position`, `team`, `status`, `bye`, `adp`).
+- `EXPERT_TAKES`: Oyuncu adına göre uzman notları.
+- `getAdvancedRecommendations()`: Öneri mantığı.
 
-* **👤 Kişiselleştirilmiş Takım Paneli:**
-    * Draft'taki herhangi bir takımı "Benim Sıram" olarak seçebilir ve tüm önerileri o takımın perspektifinden alabilirsiniz.
-    * Seçtiğiniz takımın anlık **Kadro Dağılımını** (1 QB, 2 RB vb.) dinamik olarak takip edebilirsiniz.
+## Kullanım
 
-## 🛠️ Teknoloji Mimarisi
+1. `nfl-fantasy-2025.html` dosyasını modern bir tarayıcıda aç.
+2. "Benim Sıram" menüsünden kendi takımını seç.
+3. Draft ilerledikçe seçilen oyuncuları listeden "Draft Et" ile işaretle; tahta, kadro özeti ve öneriler her pickte güncellenir.
 
-Bu proje, modern web teknolojileri kullanılarak, herhangi bir sunucu ihtiyacı olmadan tamamen tarayıcı üzerinde çalışacak şekilde tasarlanmıştır.
+Başka bir lig için kullanmak istersen `DRAFT_ORDER` dizisindeki takım adlarını düzenlemen yeterlidir. Draft durumu tarayıcıda saklanmaz; sayfa yenilenirse draft sıfırlanır.
 
-* **HTML5:** Uygulamanın temel yapısı.
-* **Tailwind CSS:** Hızlı, modern ve şık bir arayüz için kullanılan CSS framework'ü.
-* **JavaScript (ES6):** Uygulamanın tüm dinamik işlevselliğini, draft simülasyonunu ve akıllı öneri algoritmasını yöneten ana programlama dili.
+## Veri kaynakları
 
-## 🚀 Kurulum ve Kullanım
+Oyuncu sıralamaları, ADP'ler ve uzman notları çeşitli uzman kaynaklarından (CBS Sports, FantasyPros, Flock Fantasy, The Fantasy Footballers, BDGE, NFL.com vb.) elle derlenip dosyaya gömülmüştür. Bye haftaları 2025 NFL takvimine göredir. Uygulama çalışırken dış bir veri kaynağına bağlanmaz.
 
-Bu aracın kurulumu yoktur. Anında kullanmaya başlayabilirsiniz.
+## Proje durumu
 
-1.  Proje dosyasını (`.html` uzantılı) bilgisayarınıza indirin.
-2.  Dosyayı Google Chrome, Firefox veya herhangi bir modern web tarayıcısı ile açın.
-3.  Draft'ınız başladığında, "Benim Sıram" menüsünden kendi takımınızı seçin ve draft ilerledikçe seçimleri arayüz üzerinden yapın. Asistan size her adımda rehberlik edecektir.
-
-## 📚 Veri Kaynakları ve Teşekkür
-
-Bu projenin beynini oluşturan oyuncu veritabanı ve stratejik analizler, **Ze'O** tarafından titizlikle derlenen onlarca farklı kaynaktan (CBS Sports, FantasyPros, Flock Fantasy, The Fantasy Footballers, BDGE, NFL.com vb.) alınmıştır. Tüm veriler, bu kaynaklardaki uzman görüşleri, 2025 sezonu fantezi puanı projeksiyonları ve güncel sıralamalar harmanlanarak oluşturulmuştur.
-
-Bye Haftası verileri güncel **2025 NFL takvimine** göredir.
+2025-08-31 tarihinde, 2025 sezonu draftı için tek günde hazırlandı (3 commit). Bu sürüm artık geliştirilmiyor; 2026 sezonu için yeniden yazılan sürüm ayrı bir repodadır: [`nfl-draft-asistant-2026`](https://github.com/muhammetaliyoldar/nfl-draft-asistant-2026). Repoda `LICENSE` dosyası yoktur.
 
 ---
 
-<p align="center">
-  <em>Bu araç, <strong>Ze'O</strong> tarafından geliştirildi.</em>
-</p>
+<p align="center"><em>Ze'O tarafından geliştirildi.</em></p>
